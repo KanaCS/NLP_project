@@ -1,0 +1,1 @@
+Run `allenNLP train parameters.jsonnet -s tmp/serialization --include-package main`.
