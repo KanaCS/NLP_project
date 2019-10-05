@@ -18,6 +18,9 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, PytorchSeq2VecWrap
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.data.iterators.bucket_iterator import BucketIterator
+from allennlp.predictors.predictor import Predictor
+from allennlp.data import Instance
+from allennlp.common.util import JsonDict
 import os
 
 @DatasetReader.register('prop')
@@ -26,7 +29,8 @@ class PropDatasetReader(DatasetReader):
         super().__init__(lazy=False)
         self.token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
     
-    def text_to_instance(self, tokens: List[Token], tag: str = None) -> Instance:
+    def text_to_instance(self, fragment: str, tag: str = None) -> Instance:
+        tokens = [Token(word) for word in fragment.split()]
         sentence_field = TextField(tokens, self.token_indexers)
         fields = {'tokens': sentence_field}
         
@@ -55,20 +59,7 @@ class PropDatasetReader(DatasetReader):
                 article_id, technique, start, end = line.split()
                 article_id, start, end = int(article_id), int(start), int(end)
                 fragment = articles[article_id][start:end]
-                tokens = [Token(word) for word in fragment.split()]
-                yield self.text_to_instance(tokens, technique)
-
-'''
-reader = PropDatasetReader()
-dataset = reader.read('./datasets')
-vocab = Vocabulary.from_instances(dataset)
-
-EMBEDDING_DIM = 50
-HIDDEN_DIM = 30
-token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'),
-                            embedding_dim=EMBEDDING_DIM)
-word_embeddings = BasicTextFieldEmbedder({'tokens': token_embedding})
-'''
+                yield self.text_to_instance(fragment, technique)
 
 @Model.register('lstm-classifier')
 class LstmClassifier(Model):
@@ -101,20 +92,15 @@ class LstmClassifier(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {"accuracy": self.accuracy.get_metric(reset)}
 
-'''
-lstm = PytorchSeq2VecWrapper(torch.nn.LSTM(EMBEDDING_DIM, HIDDEN_DIM, batch_first=True))
-model = LstmClassifier(word_embeddings, lstm, vocab)
-
-optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
-iterator = BucketIterator(batch_size=32, sorting_keys=[('tokens', 'num_tokens')])
-iterator.index_with(vocab)
-
-trainer = Trainer(model=model,
-                  optimizer=optimizer,
-                  iterator=iterator,
-                  train_dataset=dataset[:-200],
-                  validation_dataset=dataset[-200:],
-                  patience=10,
-                  num_epochs=50)
-trainer.train()
-'''
+@Predictor.register('lstm-classifier')
+class LstmClassifierPredictor(Predictor):
+    def predict_json(self, json_dict: JsonDict) -> JsonDict:
+        article = json_dict['article']
+        instance = self._dataset_reader.text_to_instance(fragment=article)
+        output_dict = self.predict_instance(instance)
+        
+        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
+        all_labels = [label_dict[i] for i in range(len(label_dict))]
+        
+        output_dict['all_labels'] = all_labels
+        return output_dict

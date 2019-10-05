@@ -1,6 +1,6 @@
 local embedding_dim = 300;
-local hidden_dim = 100;
-local num_epochs = 100;
+local hidden_dim = 500;
+local num_epochs = 1000;
 local patience = 50;
 local batch_size = 32;
 local learning_rate = 0.01;
@@ -16,7 +16,9 @@ local learning_rate = 0.01;
         "word_embeddings": {
             "tokens": {
                 "type": "embedding",
-                "embedding_dim": embedding_dim
+                "pretrained_file": "glove.6B.300d.txt",
+                "embedding_dim": embedding_dim,
+                "trainable": false
             },
         },
         "encoder": {
