@@ -95,12 +95,16 @@ class LstmClassifier(Model):
 @Predictor.register('lstm-classifier')
 class LstmClassifierPredictor(Predictor):
     def predict_json(self, json_dict: JsonDict) -> JsonDict:
-        article = json_dict['article']
-        instance = self._dataset_reader.text_to_instance(fragment=article)
-        output_dict = self.predict_instance(instance)
+        articles = json_dict['articles']
+        output_dicts = []
+        for article_dict in articles:
+            article = article_dict['article']
+            instance = self._dataset_reader.text_to_instance(fragment=article)
+            output_dict = self.predict_instance(instance)
         
-        label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
-        all_labels = [label_dict[i] for i in range(len(label_dict))]
+            label_dict = self._model.vocab.get_index_to_token_vocabulary('labels')
+            all_labels = [label_dict[i] for i in range(len(label_dict))]
         
-        output_dict['all_labels'] = all_labels
-        return output_dict
+            output_dict['all_labels'] = all_labels
+            output_dicts.append(output_dict)
+        return output_dicts
