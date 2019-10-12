@@ -16,21 +16,18 @@ local learning_rate = 0.01;
         "word_embeddings": {
             "tokens": {
                 "type": "embedding",
-                "embedding_dim": embedding_dim
+                "pretrained_file": "glove.6B.300d.txt",
+                "embedding_dim": embedding_dim,
+                "trainable": false
             },
         },
         "encoder": {
             "type": "lstm",
             "input_size": embedding_dim,
-            "hidden_size": hidden_dim
-        },
-        "feedforward": {
-            "input_dim": hidden_dim,
-            "num_layers": 1,
-            "activations": ["linear"],
-            "hidden_dims": [14],
-            "dropout": [0.0],
-        },
+            "hidden_size": hidden_dim,
+            "bidirectional": true,
+            "dropout": 0.2
+        }
     },
     "iterator": {
         "type": "bucket",

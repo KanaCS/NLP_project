@@ -1,5 +1,5 @@
 local embedding_dim = 300;
-local hidden_dim = 500;
+local hidden_dim = 1;
 local num_epochs = 1000;
 local patience = 50;
 local batch_size = 32;
@@ -25,6 +25,13 @@ local learning_rate = 0.01;
             "type": "lstm",
             "input_size": embedding_dim,
             "hidden_size": hidden_dim
+        },
+        "feedforward": {
+            "input_dim": hidden_dim,
+            "num_layers" : 1,
+            "activations": ["linear"],
+            "hidden_dims": [14],
+            "dropout": [0.0],
         }
     },
     "iterator": {

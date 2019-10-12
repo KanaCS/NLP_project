@@ -14,6 +14,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder, BasicTextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
+from allennlp.modules import FeedForward
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, PytorchSeq2VecWrapper
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
@@ -66,12 +67,12 @@ class LstmClassifier(Model):
     def __init__(self,
                  word_embeddings: TextFieldEmbedder,
                  encoder: Seq2VecEncoder,
+                 feedforward: FeedForward,
                  vocab: Vocabulary) -> None:
         super().__init__(vocab)
         self.word_embeddings = word_embeddings
         self.encoder = encoder
-        self.hidden2tag = torch.nn.Linear(in_features=encoder.get_output_dim(),
-                                          out_features=vocab.get_vocab_size('labels'))
+        self.feedforward = feedforward
         self.accuracy = CategoricalAccuracy()
         self.loss_function = torch.nn.CrossEntropyLoss()
     
@@ -81,7 +82,7 @@ class LstmClassifier(Model):
         mask = get_text_field_mask(tokens)
         embeddings = self.word_embeddings(tokens)
         encoder_out = self.encoder(embeddings, mask)
-        logits = self.hidden2tag(encoder_out)
+        logits = self.feedforward(encoder_out)
         
         output = {'logits': logits}
         if label is not None:
